@@ -1,5 +1,3 @@
-# code-test-2022-v6
-
 Do at least ONE of the following tasks: refactor is mandatory. Write tests is optional, will be good bonus to see it. 
 Please do not invest more than 2-4 hours on this.
 Upload your results to a Github repo, for easier sharing and reviewing.
@@ -38,7 +36,7 @@ NB: you do not need to set up the code on local and make the web app run. It wil
 
 ===== So expected output is a GitHub link with either =====
 
-1. Readme described above (point X above) + refactored code
+1. Readme described above (point X above) + refactored code 
 OR
 2. Readme described above (point X above) + refactored core + a unit test of the code that we have sent
 
