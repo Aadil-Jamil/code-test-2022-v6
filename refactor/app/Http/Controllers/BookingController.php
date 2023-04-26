@@ -30,33 +30,51 @@ class BookingController extends Controller
     }
 
     /**
+     * Get the bookings list based on the user id or user type
      * @param Request $request
      * @return mixed
      */
-    public function index(Request $request)
-    {
-        if($user_id = $request->get('user_id')) {
+    public function index(Request $request): JsonResponse
+{
+    try {
+        $response = [];
 
+        // Get the user jobs based on the user id
+        if ($user_id = $request->get('user_id')) {
             $response = $this->repository->getUsersJobs($user_id);
-
         }
-        elseif($request->__authenticatedUser->user_type == env('ADMIN_ROLE_ID') || $request->__authenticatedUser->user_type == env('SUPERADMIN_ROLE_ID'))
-        {
+        // Get all the jobs for admin or super admin
+        elseif ($request->__authenticatedUser->user_type == env('ADMIN_ROLE_ID') || $request->__authenticatedUser->user_type == env('SUPERADMIN_ROLE_ID')) {
             $response = $this->repository->getAll($request);
+        } else {
+            throw new \InvalidArgumentException('Invalid request. Please provide a valid user id or user type.');
         }
 
-        return response($response);
+        // Return the response as JSON
+        return response()->json($response);
+    } catch (\Exception $e) {
+        // Handle any exceptions and return error response
+        return response()->json(['error' => $e->getMessage()], 400);
     }
+}
 
     /**
+     * Get the booking details based on the booking id
      * @param $id
      * @return mixed
      */
-    public function show($id)
+    public function show(int $id): JsonResponse
     {
-        $job = $this->repository->with('translatorJobRel.user')->find($id);
+        try {
+            // Find the booking details using the repository
+            $job = $this->repository->with('translatorJobRel.user')->find($id);
 
-        return response($job);
+            // Return the booking details as JSON
+            return response()->json($job);
+        } catch (\Exception $e) {
+            // Handle any exceptions and return error response
+            return response()->json(['error' => $e->getMessage()], 400);
+        }
     }
 
     /**
@@ -65,12 +83,17 @@ class BookingController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->all();
-
-        $response = $this->repository->store($request->__authenticatedUser, $data);
-
-        return response($response);
-
+        try {
+            // Get all the input data from the request
+            $data = $request->all();
+            // Store the booking using the repository and authenticated user
+            $response = $this->repository->store($request->__authenticatedUser, $data);
+            // Return the response with success status
+            return response($response);
+        } catch (\Exception $e) {
+            // Handle any exceptions that occurred while storing the booking
+            return response(['status' => 'fail', 'message' => $e->getMessage()]);
+        }
     }
 
     /**
@@ -80,11 +103,32 @@ class BookingController extends Controller
      */
     public function update($id, Request $request)
     {
-        $data = $request->all();
-        $cuser = $request->__authenticatedUser;
-        $response = $this->repository->updateJob($id, array_except($data, ['_token', 'submit']), $cuser);
+        try {
+            // Get the request data
+            $data = $request->all();
+            // Get the authenticated user
+            $cuser = $request->__authenticatedUser;
 
-        return response($response);
+            // Call the repository method to update the job
+            $response = $this->repository->updateJob($id, array_except($data, ['_token', 'submit']), $cuser);
+
+            // Return a success response with the updated job data
+            return response()->json([
+                'success' => true,
+                'data' => $response
+            ]);
+
+        } catch (\Exception $e) {
+            // If an exception occurs, log the error and return an error response
+            \Log::error($e->getMessage(), [
+                'stack_trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating job.'
+            ], 500);
+        }
     }
 
     /**
@@ -93,12 +137,29 @@ class BookingController extends Controller
      */
     public function immediateJobEmail(Request $request)
     {
-        $adminSenderEmail = config('app.adminemail');
-        $data = $request->all();
-
-        $response = $this->repository->storeJobEmail($data);
-
-        return response($response);
+        try {
+            // Get admin sender email from config
+            $adminSenderEmail = config('app.adminemail');
+            
+            // Get all data from the request
+            $data = $request->all();
+            
+            // Store job email data and get the response from the repository
+            $response = $this->repository->storeJobEmail($data);
+            
+            // Return success response with the response from the repository
+            return response()->json([
+                'status' => 'success',
+                'data' => $response
+            ]);
+        } catch (\Throwable $th) {
+            // Log error and return error response
+            \Log::error('Error in immediateJobEmail function: ' . $th->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while storing job email data.'
+            ], 500);
+        }
     }
 
     /**
@@ -107,13 +168,24 @@ class BookingController extends Controller
      */
     public function getHistory(Request $request)
     {
-        if($user_id = $request->get('user_id')) {
+        try {
+            // Get the user ID from the request
+            $user_id = $request->get('user_id');
 
+            // Check if user ID exists in the request
+            if (!$user_id) {
+                throw new InvalidArgumentException('User ID is required.');
+            }
+
+            // Call the repository function to get user's job history
             $response = $this->repository->getUsersJobsHistory($user_id, $request);
-            return response($response);
-        }
 
-        return null;
+            // Return the response
+            return response($response);
+        } catch (Exception $e) {
+            // Handle any exceptions that may occur and return an error response
+            return response(['error' => $e->getMessage()], 400);
+        }
     }
 
     /**
